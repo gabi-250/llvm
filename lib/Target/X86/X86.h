@@ -94,7 +94,7 @@ FunctionPass *createX86FixupBWInsts();
 
 void initializeFixupBWInstPassPass(PassRegistry &);
 
-/// This pass replaces EVEX ecnoded of AVX-512 instructiosn by VEX 
+/// This pass replaces EVEX ecnoded of AVX-512 instructiosn by VEX
 /// encoding when possible in order to reduce code size.
 FunctionPass *createX86EvexToVexInsts();
 
@@ -104,6 +104,12 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
 
 void initializeEvexToVexInstPassPass(PassRegistry &);
 
+FunctionPass *createX86TraceStackSizeCalculator();
+void initializeX86TraceStackSizeCalculatorPass(PassRegistry &);
+FunctionPass *createX86StackResizer();
+void initializeX86StackResizerPass(PassRegistry &);
+
 } // End llvm namespace
+
 
 #endif
