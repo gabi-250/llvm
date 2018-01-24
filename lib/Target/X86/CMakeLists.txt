@@ -66,7 +66,6 @@ set(sources
   X86VZeroUpper.cpp
   X86WinAllocaExpander.cpp
   X86WinEHState.cpp
-  X86TraceStackSizeCalculator.cpp
   X86StackResizer.cpp
   X86CallingConv.cpp
   ${GLOBAL_ISEL_BUILD_FILES}

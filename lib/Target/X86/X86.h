@@ -104,8 +104,6 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
 
 void initializeEvexToVexInstPassPass(PassRegistry &);
 
-FunctionPass *createX86TraceStackSizeCalculator();
-void initializeX86TraceStackSizeCalculatorPass(PassRegistry &);
 FunctionPass *createX86StackResizer();
 void initializeX86StackResizerPass(PassRegistry &);
 

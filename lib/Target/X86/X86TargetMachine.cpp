@@ -74,7 +74,6 @@ extern "C" void LLVMInitializeX86Target() {
   initializeEvexToVexInstPassPass(PR);
   initializeFixupLEAPassPass(PR);
   initializeX86ExecutionDepsFixPass(PR);
-  initializeX86TraceStackSizeCalculatorPass(PR);
   initializeX86StackResizerPass(PR);
 }
 
@@ -418,7 +417,6 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupLEAs());
     addPass(createX86EvexToVexInsts());
   }
-  addPass(createX86TraceStackSizeCalculator());
   addPass(createX86StackResizer());
 }
 
