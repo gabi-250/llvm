@@ -7,6 +7,8 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -28,18 +30,11 @@ namespace tracing {
 
     virtual bool runOnMachineFunction(MachineFunction &mfun) override;
 
-    virtual void getAnalysisUsage(AnalysisUsage &usage) const override;
-
     StringRef getPassName() const override {
       return X86_STACK_RESIZER_PASS_NAME;
     }
   };
   char X86StackResizer::ID = 0;
-
-  void X86StackResizer::getAnalysisUsage(AnalysisUsage &usage) const {
-    usage.addRequired<tracing::X86TraceStackSizeCalculator>();
-    MachineFunctionPass::getAnalysisUsage(usage);
-  }
 
   bool X86StackResizer::runOnMachineFunction(MachineFunction &mfun) {
     outs() << "Running StackResizerPass on " << mfun.getName() << '\n';
@@ -51,8 +46,27 @@ namespace tracing {
         uint64_t stack_size = 0;
         if (data.empty() || data.trim().getAsInteger(10, stack_size)) {
           errs() << "Could not set the stack size of trace\n";
+          return false;
         } else {
-          mfun.getFrameInfo().setStackSize(stack_size);
+          uint64_t cur_stack_size = mfun.getFrameInfo().getStackSize();
+          if (stack_size > cur_stack_size) {
+            mfun.getFrameInfo().setStackSize(stack_size);
+            for (auto &mbb: mfun) {
+              for (auto &minstr: mbb) {
+                if (minstr.getOpcode() == X86::SUB64ri8) {
+                  auto operand = minstr.getOperand(0);
+                  if (operand.isReg()) {
+                    MachineOperand &operand = minstr.getOperand(2);
+                    if (operand.isImm() || operand.isCImm()) {
+                      operand.ChangeToImmediate(
+                          operand.getImm() + stack_size - cur_stack_size);
+                      return true;
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

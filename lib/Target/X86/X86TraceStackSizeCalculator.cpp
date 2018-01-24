@@ -36,17 +36,12 @@ StringRef X86TraceStackSizeCalculator::getPassName() const {
 bool X86TraceStackSizeCalculator::runOnMachineFunction(MachineFunction &mfun) {
   if (mfun.getName() == "trace" || mfun.getName() == "__unopt_trace") {
     uint64_t stack_size = mfun.getFrameInfo().getStackSize();
-    outs() << "Running on " << mfun.getName() << " ";
-    outs() << "stack size is " << stack_size << '\n';
     int fd = open("/tmp/__trace_stack_size.txt", O_RDWR | O_CREAT, 0666);
     if (fd == -1) {
       errs() << "Failed to open stack size file\n";
       return false;
     }
     llvm::raw_fd_ostream out(fd, true);
-    //struct stat st;
-    //fstat(fd, &st);
-    //int size = st.st_size;
     auto ret = MemoryBuffer::getOpenFile(fd, "/tmp/__trace_stack_size.txt", -1);
     if (!ret) {
       errs() << "Failed to map stack size file\n";
