@@ -84,8 +84,8 @@ namespace {
 
 INITIALIZE_PASS(X86StackResizer, "x86-stack-resizer",
                 X86_STACK_RESIZER_PASS_NAME,
-                false,  // CFG
-                false  // analysis
+                false,  /* only looks at CFG */
+                false   /* analysis pass     */
                 )
 
 namespace llvm {
