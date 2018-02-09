@@ -14,11 +14,15 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/ADT/StringRef.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string>
+
 #define X86_STACK_RESIZER_PASS_NAME "X86 Stack Resizer Pass"
-#define STACK_SIZE_FILE "/tmp/__trace_stack_size.txt"
+#define TMP std::string("/tmp/")
+#define UNOPT_PREFIX "__unopt_"
 
 using namespace llvm;
 
@@ -33,25 +37,34 @@ namespace {
 
     virtual bool runOnMachineFunction(MachineFunction &mfun) override;
 
+    std::string getRealName(StringRef name);
+
     StringRef getPassName() const override {
       return X86_STACK_RESIZER_PASS_NAME;
     }
   };
   char X86StackResizer::ID = 0;
 
+
+  std::string X86StackResizer::getRealName(StringRef name) {
+    if (name.startswith(UNOPT_PREFIX)) {
+      return name.drop_front(StringRef(UNOPT_PREFIX).size()).str();
+    }
+    return name.str();
+  }
+
   bool X86StackResizer::runOnMachineFunction(MachineFunction &mfun) {
     outs() << "Running StackResizerPass on " << mfun.getName() << '\n';
-    if (mfun.getName() != "trace" && mfun.getName() != "__unopt_trace") {
-      return false;
-    }
     uint64_t cur_stack_size = mfun.getFrameInfo().getStackSize();
-    int fd = open(STACK_SIZE_FILE, O_RDWR | O_CREAT, 0666);
+    int fd = open((TMP + getRealName(mfun.getName())).c_str(),
+                  O_RDWR | O_CREAT, 0666);
     if (fd == -1) {
       errs() << "Failed to open stack size file\n";
       return false;
     }
     llvm::raw_fd_ostream out(fd, true);
-    auto ret = MemoryBuffer::getOpenFile(fd, STACK_SIZE_FILE, -1);
+    auto ret =
+      MemoryBuffer::getOpenFile(fd, TMP + getRealName(mfun.getName()), -1);
     if (ret) {
       StringRef data = ret.get()->getBuffer();
       uint64_t stack_size = 0;
@@ -59,7 +72,7 @@ namespace {
           || stack_size <= cur_stack_size) {
         out << cur_stack_size;
         return true;
-      } else if (mfun.getName() == "trace") {
+      } else if (!mfun.getName().startswith(UNOPT_PREFIX)) {
         mfun.getFrameInfo().setStackSize(stack_size);
         for (auto &mbb: mfun) {
           for (auto &minstr: mbb) {
