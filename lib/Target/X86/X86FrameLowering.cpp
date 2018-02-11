@@ -31,6 +31,7 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetOptions.h"
+#include "Utils/X86StackSizeComparator.h"
 #include <cstdlib>
 
 using namespace llvm;
@@ -68,7 +69,7 @@ X86FrameLowering::canSimplifyCallFramePseudos(const MachineFunction &MF) const {
 // needsFrameIndexResolution - Do we need to perform FI resolution for
 // this function. Normally, this is required only when the function
 // has any stack objects. However, FI resolution actually has another job,
-// not apparent from the title - it resolves callframesetup/destroy 
+// not apparent from the title - it resolves callframesetup/destroy
 // that were not simplified earlier.
 // So, this is required for x86 functions that have push sequences even
 // when there are no stack objects.
@@ -604,7 +605,7 @@ void X86FrameLowering::emitStackProbeInline(MachineFunction &MF,
   int64_t RCXShadowSlot = 0;
   int64_t RDXShadowSlot = 0;
 
-  // If inlining in the prolog, save RCX and RDX.     
+  // If inlining in the prolog, save RCX and RDX.
   // Future optimization: don't save or restore if not live in.
   if (InProlog) {
     // Compute the offsets. We need to account for things already
@@ -939,6 +940,9 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   uint64_t MaxAlign = calculateMaxStackAlign(MF); // Desired stack alignment.
   uint64_t StackSize = MFI.getStackSize();    // Number of bytes to allocate.
+  // Make sure the optimized version of each function has the same stack size
+  // as its unoptimized counterpart.
+  StackSize = getStoredStackSize(MF.getName(), StackSize);
   bool IsFunclet = MBB.isEHFuncletEntry();
   EHPersonality Personality = EHPersonality::Unknown;
   if (Fn->hasPersonalityFn())
@@ -958,7 +962,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
           ? getX86SubSuperRegister(FramePtr, 64) : FramePtr;
   unsigned BasePtr = TRI->getBaseRegister();
   bool HasWinCFI = false;
-  
+
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
   DebugLoc DL;
@@ -1543,6 +1547,9 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
 
   // Get the number of bytes to allocate from the FrameInfo.
   uint64_t StackSize = MFI.getStackSize();
+  // Make sure the optimized version of each function has the same stack size
+  // as its unoptimized counterpart.
+  StackSize = getStoredStackSize(MF.getName(), StackSize);
   uint64_t MaxAlign = calculateMaxStackAlign(MF);
   unsigned CSSize = X86FI->getCalleeSavedFrameSize();
   uint64_t NumBytes = 0;
@@ -2605,7 +2612,7 @@ bool X86FrameLowering::adjustStackWithPops(MachineBasicBlock &MBB,
     Regs[FoundRegs++] = Regs[0];
 
   for (int i = 0; i < NumPops; ++i)
-    BuildMI(MBB, MBBI, DL, 
+    BuildMI(MBB, MBBI, DL,
             TII.get(STI.is64Bit() ? X86::POP64r : X86::POP32r), Regs[i]);
 
   return true;
@@ -2637,7 +2644,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     MachineModuleInfo &MMI = MF.getMMI();
     const Function *Fn = MF.getFunction();
     bool WindowsCFI = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
-    bool DwarfCFI = !WindowsCFI && 
+    bool DwarfCFI = !WindowsCFI &&
                     (MMI.hasDebugInfo() || Fn->needsUnwindTableEntry());
 
     // If we have any exception handlers in this function, and we adjust
@@ -2886,7 +2893,7 @@ struct X86FrameSortingComparator {
     // in general. Something to keep in mind, though.
     if (DensityAScaled == DensityBScaled)
       return A.ObjectAlignment < B.ObjectAlignment;
-    
+
     return DensityAScaled < DensityBScaled;
   }
 };
@@ -2922,7 +2929,7 @@ void X86FrameLowering::orderFrameObjects(
     if (ObjectSize == 0)
       // Variable size. Just use 4.
       SortingObjects[Obj].ObjectSize = 4;
-    else      
+    else
       SortingObjects[Obj].ObjectSize = ObjectSize;
   }
 

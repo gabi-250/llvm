@@ -74,7 +74,6 @@ extern "C" void LLVMInitializeX86Target() {
   initializeEvexToVexInstPassPass(PR);
   initializeFixupLEAPassPass(PR);
   initializeX86ExecutionDepsFixPass(PR);
-  initializeX86StackResizerPass(PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -417,7 +416,6 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createX86FixupLEAs());
     addPass(createX86EvexToVexInsts());
   }
-  addPass(createX86StackResizer());
 }
 
 
