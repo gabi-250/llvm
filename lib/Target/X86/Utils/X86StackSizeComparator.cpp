@@ -18,7 +18,6 @@ std::string getRealName(StringRef name) {
 uint64_t getStoredStackSize(StringRef funName, uint64_t stackSize) {
   int fd = open((TMP + getRealName(funName)).c_str(),
                 O_RDWR | O_CREAT, 0666);
-  uint64_t newStackSize = stackSize;
   if (fd == -1) {
     errs() << "Failed to open stack size file\n";
     return false;
@@ -28,15 +27,18 @@ uint64_t getStoredStackSize(StringRef funName, uint64_t stackSize) {
     MemoryBuffer::getOpenFile(fd, TMP + getRealName(funName), -1);
   if (ret) {
     StringRef data = ret.get()->getBuffer();
-    if (data.empty() || data.trim().getAsInteger(10, newStackSize)
-        || newStackSize <= stackSize) {
+    uint64_t storedStackSize = 0;
+    if (data.empty() || data.trim().getAsInteger(10, storedStackSize)
+        || storedStackSize < stackSize) {
       out << stackSize;
-      outs() << "Writing to file " << stackSize << "\n";
+      return stackSize;
+    } else {
+      return storedStackSize;
     }
   } else {
     errs() << "Failed to create memory buffer\n";
   }
-  return newStackSize;
+  return stackSize;
 }
 
 }
