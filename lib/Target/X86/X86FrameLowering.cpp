@@ -943,6 +943,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   // Make sure the optimized version of each function has the same stack size
   // as its unoptimized counterpart.
   StackSize = getStoredStackSize(MF.getName(), StackSize);
+  MFI.setStackSize(StackSize);
   bool IsFunclet = MBB.isEHFuncletEntry();
   EHPersonality Personality = EHPersonality::Unknown;
   if (Fn->hasPersonalityFn())
