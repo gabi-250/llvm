@@ -5,8 +5,8 @@
 #include <sys/types.h>
 #include <string>
 
-#define TMP std::string("/tmp/__stack_resizer_")
 #define UNOPT_PREFIX "__unopt_"
+#define TEMP_PREFIX ".stack_resizer_"
 
 namespace llvm {
 

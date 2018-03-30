@@ -16,7 +16,7 @@ std::string getRealName(StringRef name) {
 }
 
 uint64_t getStoredStackSize(StringRef funName, uint64_t stackSize) {
-  int fd = open((TMP + getRealName(funName)).c_str(),
+  int fd = open((TEMP_PREFIX + getRealName(funName)).c_str(),
                 O_RDWR | O_CREAT, 0666);
   if (fd == -1) {
     errs() << "Failed to open stack size file\n";
@@ -24,7 +24,7 @@ uint64_t getStoredStackSize(StringRef funName, uint64_t stackSize) {
   }
   llvm::raw_fd_ostream out(fd, true);
   auto ret =
-    MemoryBuffer::getOpenFile(fd, TMP + getRealName(funName), -1);
+    MemoryBuffer::getOpenFile(fd, TEMP_PREFIX + getRealName(funName), -1);
   if (ret) {
     StringRef data = ret.get()->getBuffer();
     uint64_t storedStackSize = 0;
